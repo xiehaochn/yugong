@@ -55,9 +55,9 @@
     <dependencySets>
         <dependencySet>
             <outputDirectory>lib</outputDirectory>
-            <excludes>
-                <exclude>junit:junit</exclude>
-            </excludes>
+<!--            <excludes>-->
+<!--                <exclude>junit:junit</exclude>-->
+<!--            </excludes>-->
         </dependencySet>
     </dependencySets>
 </component>

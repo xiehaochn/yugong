@@ -9,13 +9,18 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
 import java.util.Properties;
 
 public class KafkaApplier extends AbstractRecordApplier {
   private Producer<String, String> producer;
   private String topic;
+
+  private static final Logger logger = LoggerFactory.getLogger(KafkaApplier.class);
 
   public KafkaApplier() {}
 
@@ -26,7 +31,9 @@ public class KafkaApplier extends AbstractRecordApplier {
       int batchSize,
       int lingerMs,
       int bufferMemory,
-      String topic) {
+      String topic,
+      String krb5FilePath,
+      String jaasFilePath) {
     Properties props = new Properties();
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
     props.put(ProducerConfig.ACKS_CONFIG, acks);
@@ -41,6 +48,20 @@ public class KafkaApplier extends AbstractRecordApplier {
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
         "org.apache.kafka.common.serialization.StringSerializer");
     this.topic = topic;
+    File krb5File = new File(krb5FilePath);
+    File jaasFile = new File(jaasFilePath);
+    if (krb5File.exists() && jaasFile.exists()) {
+      System.setProperty("java.security.krb5.conf", krb5File.getAbsolutePath());
+      System.setProperty("java.security.auth.login.config", jaasFile.getAbsolutePath());
+      System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+      props.put("security.protocol", "SASL_PLAINTEXT");
+      props.put("sasl.kerberos.service.name", "kafka");
+      props.put("sasl.mechanism", "GSSAPI");
+    } else {
+      logger.info("kerberos config file not exists.file path:");
+      logger.info("krb5 file path:" + krb5FilePath);
+      logger.info("jaas file path:" + jaasFilePath);
+    }
     producer = new KafkaProducer<>(props);
   }
 

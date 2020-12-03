@@ -388,8 +388,18 @@ public class YuGongController extends AbstractYuGongLifeCycle {
       int lingerMs = config.getInt("yugong.applier.kafka.linger.ms", 1);
       int bufferMemory = config.getInt("yugong.applier.kafka.buffer.memory", 33554432);
       String topic = config.getString("yugong.applier.kafka.topic", "yugong_default_topic");
+      String krb5FilePath = config.getString("yugong.applier.kafka.kerberos.krb5.file", "");
+      String jaasFilePath = config.getString("yugong.applier.kafka.kerberos.jaas.file", "");
       return new KafkaApplier(
-          bootstrapServer, acks, retries, batchSize, lingerMs, bufferMemory, topic);
+          bootstrapServer,
+          acks,
+          retries,
+          batchSize,
+          lingerMs,
+          bufferMemory,
+          topic,
+          krb5FilePath,
+          jaasFilePath);
     }
     boolean concurrent = config.getBoolean("yugong.applier.concurrent.enable", true);
     int threadSize = config.getInt("yugong.applier.concurrent.size", 5);

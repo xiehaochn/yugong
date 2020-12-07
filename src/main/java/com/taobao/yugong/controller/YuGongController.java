@@ -435,6 +435,8 @@ public class YuGongController extends AbstractYuGongLifeCycle {
       } else {
         return new CheckRecordApplier(context);
       }
+    } else if (runMode == RunMode.MARK || runMode == RunMode.CLEAR) {
+      return new EmptyApplier();
     } else {
       return new FullRecordApplier(context); // 其他情况返回一个full
     }
@@ -511,7 +513,12 @@ public class YuGongController extends AbstractYuGongLifeCycle {
     // }
 
     logger.info("check target database connection ...");
-    context.setTargetDs(initDataSource("target"));
+    if (!(runMode == RunMode.KAFKA_ALL
+        || runMode == RunMode.KAFKA_INC
+        || runMode == RunMode.MARK
+        || runMode == RunMode.CLEAR)) {
+      context.setTargetDs(initDataSource("target"));
+    }
     logger.info("check target database is ok");
     context.setSourceEncoding(config.getString("yugong.database.source.encode", "UTF-8"));
     context.setTargetEncoding(config.getString("yugong.database.target.encode", "UTF-8"));
@@ -577,7 +584,13 @@ public class YuGongController extends AbstractYuGongLifeCycle {
     }
 
     List<TableHolder> tables = Lists.newArrayList();
-    DbType targetDbType = YuGongUtils.judgeDbType(globalContext.getTargetDs());
+    DbType targetDbType = DbType.ORACLE;
+    if (!(runMode == RunMode.KAFKA_ALL
+        || runMode == RunMode.KAFKA_INC
+        || runMode == RunMode.MARK
+        || runMode == RunMode.CLEAR)) {
+      targetDbType = YuGongUtils.judgeDbType(globalContext.getTargetDs());
+    }
     if (!isEmpty) {
       for (Object obj : tableWhiteList) {
         String whiteTable = getTable((String) obj);

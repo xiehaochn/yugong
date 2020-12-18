@@ -3,6 +3,7 @@ package com.taobao.yugong.applier;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.taobao.yugong.common.audit.RecordDumper;
 import com.taobao.yugong.common.model.record.Record;
 import com.taobao.yugong.exception.YuGongException;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -13,16 +14,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
 public class KafkaApplier extends AbstractRecordApplier {
   private Producer<String, String> producer;
   private String topic;
+  private int partitionNum;
+  private HashMap<String, Integer> taPartitionMap = new HashMap<>();
 
   private static final Logger logger = LoggerFactory.getLogger(KafkaApplier.class);
-
-  public KafkaApplier() {}
 
   public KafkaApplier(
       String bootstrapServer,
@@ -33,7 +36,8 @@ public class KafkaApplier extends AbstractRecordApplier {
       int bufferMemory,
       String topic,
       String krb5FilePath,
-      String jaasFilePath) {
+      String jaasFilePath,
+      int partitionNum) {
     Properties props = new Properties();
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
     props.put(ProducerConfig.ACKS_CONFIG, acks);
@@ -48,6 +52,7 @@ public class KafkaApplier extends AbstractRecordApplier {
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
         "org.apache.kafka.common.serialization.StringSerializer");
     this.topic = topic;
+    this.partitionNum = partitionNum;
     File krb5File = new File(krb5FilePath);
     File jaasFile = new File(jaasFilePath);
     if (krb5File.exists() && jaasFile.exists()) {
@@ -63,24 +68,54 @@ public class KafkaApplier extends AbstractRecordApplier {
       logger.info("jaas file path:" + jaasFilePath);
     }
     producer = new KafkaProducer<>(props);
+    initPartitionMap();
+  }
+
+  private void initPartitionMap() {
+    taPartitionMap.put("TA0DB.DVDN_DTL_CFM_0", 0);
+    taPartitionMap.put("TA0DB.DVDN_DTL_CFM_1", 1);
+    taPartitionMap.put("TA0DB.TA_PD_DVDN_DTL_TBL_0", 2);
+    taPartitionMap.put("TA0DB.TA_PD_DVDN_DTL_TBL_1", 3);
+    taPartitionMap.put("TA1DB.DVDN_DTL_CFM_0", 4);
+    taPartitionMap.put("TA1DB.DVDN_DTL_CFM_1", 5);
+    taPartitionMap.put("TA1DB.TA_PD_DVDN_DTL_TBL_0", 6);
+    taPartitionMap.put("TA1DB.TA_PD_DVDN_DTL_TBL_1", 7);
+    taPartitionMap.put("TA2DB.DVDN_DTL_CFM_0", 8);
+    taPartitionMap.put("TA2DB.DVDN_DTL_CFM_1", 9);
+    taPartitionMap.put("TA2DB.TA_PD_DVDN_DTL_TBL_0", 10);
+    taPartitionMap.put("TA2DB.TA_PD_DVDN_DTL_TBL_1", 11);
+    taPartitionMap.put("TA3DB.DVDN_DTL_CFM_0", 12);
+    taPartitionMap.put("TA3DB.DVDN_DTL_CFM_1", 13);
+    taPartitionMap.put("TA3DB.TA_PD_DVDN_DTL_TBL_0", 14);
+    taPartitionMap.put("TA3DB.TA_PD_DVDN_DTL_TBL_1", 15);
   }
 
   public void apply(List<Record> records) throws YuGongException {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    ArrayList<String> recordJsonString = new ArrayList<>();
+    ArrayList<Integer> partitionNumList = new ArrayList<>();
     for (Record record : records) {
+      String fullTableName = (record.getSchemaName() + "." + record.getTableName()).toUpperCase();
       try {
         String recordJson = objectMapper.writeValueAsString(record);
-        producer.send(
-            new ProducerRecord<>(
-                topic,
-                (record.getSchemaName() + "." + record.getTableName()).toLowerCase(),
-                recordJson));
+        recordJsonString.add(recordJson);
+        if (partitionNum == 0) {
+          partitionNumList.add(0);
+        } else {
+          //          partitionNumList.add(Math.abs(fullTableName.hashCode() % partitionNum));
+          partitionNumList.add(taPartitionMap.get(fullTableName));
+        }
       } catch (JsonProcessingException e) {
         logger.error("record convert to json string failed", e);
         logger.error(("record:") + record.toString());
       }
     }
-    producer.flush();
+    RecordDumper.applierLog("start send.size:" + recordJsonString.size());
+    for (int i = 0; i < recordJsonString.size(); i++) {
+      producer.send(
+          new ProducerRecord<>(topic, partitionNumList.get(i), "key", recordJsonString.get(i)));
+    }
+    RecordDumper.applierLog("end send");
   }
 }

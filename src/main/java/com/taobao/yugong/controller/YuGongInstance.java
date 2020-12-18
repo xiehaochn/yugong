@@ -197,10 +197,11 @@ public class YuGongInstance extends AbstractYuGongLifeCycle {
                       // 提取数据
                       List<Record> records = extractor.extract();
                       List<Record> ackRecords = records; // 保留ack引用
+                      RecordDumper.extractorLog("start extract");
                       if (YuGongUtils.isEmpty(records)) {
                         status = extractor.status();
                       }
-
+                      RecordDumper.extractorLog("end extract");
                       // 判断是否记录日志
                       RecordDumper.dumpExtractorInfo(
                           batchId.incrementAndGet(), ackRecords, lastPosition, extractorDump);
@@ -214,7 +215,6 @@ public class YuGongInstance extends AbstractYuGongLifeCycle {
 
                       // 转换数据
                       records = processTranslator(translator, records);
-
                       // 载入数据
                       Throwable applierException = null;
                       for (int i = 0; i < retryTimes; i++) {
@@ -229,11 +229,9 @@ public class YuGongInstance extends AbstractYuGongLifeCycle {
                           }
                         }
                       }
-
                       if (applierException != null) {
                         throw applierException;
                       }
-
                       // 提供ack，进行后续处理
                       Position position = extractor.ack(ackRecords);
                       if (position != null) {
@@ -243,7 +241,6 @@ public class YuGongInstance extends AbstractYuGongLifeCycle {
 
                       context.setLastPosition(position);
                       lastPosition = position;
-
                       // 判断是否记录日志
                       RecordDumper.dumpApplierInfo(
                           batchId.get(), ackRecords, records, position, applierDump);

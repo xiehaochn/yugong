@@ -136,7 +136,6 @@ public class ContinueExtractor extends AbstractYuGongLifeCycle implements Runnab
 
                   result.add(re);
                 }
-                logger.info("result:" + result);
 
                 if (result.size() < 1) {
                   oracleFullRecordExtractor.setStatus(ExtractStatus.TABLE_END);
@@ -145,7 +144,6 @@ public class ContinueExtractor extends AbstractYuGongLifeCycle implements Runnab
 
                 for (Record record : result) {
                   try {
-                    logger.info("record:" + record);
                     queue.put(record);
                   } catch (InterruptedException e) {
                     Thread.currentThread().interrupt(); // 传递

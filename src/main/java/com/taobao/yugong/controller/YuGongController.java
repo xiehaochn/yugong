@@ -380,28 +380,7 @@ public class YuGongController extends AbstractYuGongLifeCycle {
   private RecordApplier chooseApplier(
       TableHolder tableHolder, YuGongContext context, RunMode runMode) {
     if (runMode == RunMode.KAFKA_INC || runMode == RunMode.KAFKA_ALL) {
-      String bootstrapServer =
-          config.getString("yugong.applier.kafka.bootstrap.servers", "127.0.0.1:9092");
-      String acks = config.getString("yugong.applier.kafka.acks", "all");
-      int retries = config.getInt("yugong.applier.kafka.retries", 0);
-      int batchSize = config.getInt("yugong.applier.kafka.batch.size", 16384);
-      int lingerMs = config.getInt("yugong.applier.kafka.linger.ms", 1);
-      int bufferMemory = config.getInt("yugong.applier.kafka.buffer.memory", 33554432);
-      String topic = config.getString("yugong.applier.kafka.topic", "yugong_default_topic");
-      String krb5FilePath = config.getString("yugong.applier.kafka.kerberos.krb5.file", "");
-      String jaasFilePath = config.getString("yugong.applier.kafka.kerberos.jaas.file", "");
-      int partitionNum = config.getInt("yugong.applier.kafka.partitionNum", 0);
-      return new KafkaApplier(
-          bootstrapServer,
-          acks,
-          retries,
-          batchSize,
-          lingerMs,
-          bufferMemory,
-          topic,
-          krb5FilePath,
-          jaasFilePath,
-          partitionNum);
+      return new KafkaApplier(config);
     }
     boolean concurrent = config.getBoolean("yugong.applier.concurrent.enable", true);
     int threadSize = config.getInt("yugong.applier.concurrent.size", 5);
